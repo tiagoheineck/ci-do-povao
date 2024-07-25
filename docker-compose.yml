@@ -1,0 +1,73 @@
+services:
+  # Proxy Reverso Dinâmico
+  proxy:
+    container_name: ci-proxy
+    build: proxy
+    env_file:
+      - .env
+    restart: unless-stopped    
+    ports:
+      - "80:80"
+      - "443:443"      
+    volumes:
+      - /etc/localtime:/etc/localtime:ro      
+      - ./proxy/proxy-confs/nginx.conf:/etc/nginx/nginx.conf
+      - ./proxy/proxy-confs/conf.d:/etc/nginx/conf.d/
+  #
+  # Banco Postgres
+  #
+  postgres:
+   container_name: ci-pg-homologacao
+   image: postgres:16.1
+   environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_root_password
+      PGDATA: /data/postgres
+   volumes:
+      - postgresdata:/data/postgres            
+      - /etc/localtime:/etc/localtime:ro   
+   restart: unless-stopped
+   ports:
+    - 5432:5432
+   secrets:
+    - db_root_password  
+  #
+  # Pgadmin
+  #
+  pgadmin:
+    container_name: ci-pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "devops@cidopovao.com"
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/db_root_password    
+    restart: unless-stopped
+    secrets:
+      - db_root_password
+
+  check:
+    container_name: ci-check
+    restart: unless-stopped
+    image: nginx    
+
+  check-node:
+    build: check_node
+    container_name: ci-check-node
+    restart: unless-stopped        
+
+  mailpit:
+    container_name: ci-mailpit
+    build: mailpit          
+    restart: unless-stopped
+    ports:
+      - 8025:8025
+      - 1025:1025
+
+networks:
+  default:
+    name: devops-povao
+
+volumes:  
+  postgresdata:  
+    
+secrets:  
+  db_root_password:
+    file: ./secrets/db_root_password.txt  
