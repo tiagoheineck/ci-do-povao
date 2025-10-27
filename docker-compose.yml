@@ -1,4 +1,20 @@
 services:
+  gitlab:
+    image: 'gitlab/gitlab-ce:latest'
+    container_name: ci-gitlab
+    restart: unless-stopped
+    hostname: 'gitlab.localhost'
+    networks:
+      - proxy_network
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.localhost'            
+    volumes:
+      - 'gitlab_config:/etc/gitlab'
+      - 'gitlab_logs:/var/log/gitlab'
+      - 'gitlab_data:/var/opt/gitlab'
+    shm_size: '256m'
+
   # Proxy Reverso Dinâmico
   proxy:
     container_name: ci-proxy
@@ -6,6 +22,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped    
+    networks:
+      - proxy_network
     ports:
       - "80:80"
       - "443:443"      
@@ -18,9 +36,11 @@ services:
   gitlab-runner1:
     image: gitlab/gitlab-runner:alpine
     restart: always
-    container_name: gitlab-runner1        
+    container_name: gitlab-runner1         
+    networks:
+      - proxy_network
     volumes:
-     - ./gitlab_runner_config/gitlab-runner:/etc/gitlab-runner
+     - gitlab_runner_data:/etc/gitlab-runner
      - /var/run/docker.sock:/var/run/docker.sock    
      
          
@@ -37,6 +57,8 @@ services:
       - postgresdata:/data/postgres            
       - /etc/localtime:/etc/localtime:ro   
    restart: unless-stopped
+   networks:
+     - database_network
    ports:
     - 5432:5432
    secrets:
@@ -47,6 +69,9 @@ services:
   pgadmin:
     container_name: ci-pgadmin
     image: dpage/pgadmin4
+    networks:
+      - proxy_network
+      - database_network
     environment:
       PGADMIN_DEFAULT_EMAIL: "devops@cidopovao.com"
       PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/db_root_password    
@@ -55,29 +80,45 @@ services:
       - db_root_password
 
   check:
-    container_name: ci-check
+    container_name: check
     restart: unless-stopped
+    networks:
+      - proxy_network
     image: nginx    
 
   check-node:
     build: check_node
-    container_name: ci-check-node
-    restart: unless-stopped        
+    container_name: check-node
+    networks:
+      - proxy_network
+    restart: unless-stopped
 
   mailpit:
     container_name: ci-mailpit
-    build: mailpit          
+    build: mailpit
+    networks:
+      - proxy_network
     restart: unless-stopped
     ports:
       - 8025:8025
       - 1025:1025
 
-networks:
-  default:
+networks:  
+  proxy_network:
     name: devops-povao
+    driver: bridge
+    external: true
+  database_network:
+    name: devops-povao-database
+    driver: bridge
+    external: false    
 
 volumes:  
   postgresdata:  
+  gitlab_config:
+  gitlab_data:
+  gitlab_logs:
+  gitlab_runner_data:
     
 secrets:  
   db_root_password:
