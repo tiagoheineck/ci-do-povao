@@ -18,6 +18,8 @@ Obs:  O Gitlab demora para subir, acompanhe os logs com
 ```
 docker compose logs -f gitlab
 ```
+Então pegue a senha de root com
+```
 docker exec -it ci-gitlab grep 'Password:' /etc/gitlab/initial_root_password
 ```
 Usuário padrão: root
