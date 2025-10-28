@@ -8,7 +8,7 @@ services:
       - proxy_network
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.localhost'            
+        external_url 'http://gitlab'            
     volumes:
       - 'gitlab_config:/etc/gitlab'
       - 'gitlab_logs:/var/log/gitlab'
